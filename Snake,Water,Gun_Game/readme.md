@@ -27,10 +27,10 @@ The web version is built as a **single self-contained HTML file** — React, Bab
 ### ✨ Key Highlights
 
 - 🎮 **Fully Interactive UI** — tap a move, watch the round play out
-- 🌀 **Suspense-Building Reveal** — the computer's pick shuffles through all three options before landing on its final choice
+- 🌀 **Suspense-Building Reveal** — the computer's choice rapidly cycles through the available moves before revealing the final pick
 - 🎨 **Hand-Built SVG Icons** — custom snake, water droplet, and pistol silhouettes (no icon library has these)
 - 🎊 **Confetti Burst** on every win
-- 📊 **Live Scoreboard** — win/loss/tie tallies and round counter, persisted for the session
+- 📊 **Live Scoreboard** — win/loss/tie tallies and round counter tracked during the current game
 - 🐍 **Python Origin Story** — includes the original console version this was built from
 
 ---
@@ -68,11 +68,11 @@ The **original Python version** (`snake_water_gun.py`) encodes the same rules nu
 '''
 1 for snake, -1 for water, 0 for gun
 '''
-if (computer == -1 and you == 1):
+if computer == -1 and you == 1:
     print("You Win !!!")      # snake drinks water
-elif (computer == 0 and you == -1):
+elif computer == 0 and you == -1:
     print("You Win!!!")       # water rusts gun
-elif (computer == 1 and you == 0):
+elif computer == 1 and you == 0:
     print("You Win!!!")       # gun kills snake
 # ...and so on for every losing combination
 ```
@@ -184,7 +184,7 @@ Idle → Player picks a move
 
 ## 👤 Author
 
-**Areeba**
+**Areeba Ali**
 Built as a progression from a Python console script into a fully interactive web game.
 
 ---

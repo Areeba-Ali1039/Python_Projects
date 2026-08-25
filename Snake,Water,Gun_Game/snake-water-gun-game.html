@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Snake Water Gun</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; }
+  #root { min-height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// ---------- Icons ----------
+const SnakeIcon = ({ className }) => (
+  <svg viewBox="0 0 100 100" className={className} fill="none">
+    <path
+      d="M14 86
+         C 10 74, 16 64, 28 62
+         C 42 60, 46 50, 36 42
+         C 24 34, 22 22, 32 13
+         C 40 6, 52 6, 58 13
+         C 63 19, 61 25, 54 27
+         C 49 28.5, 47 33, 51 37
+         C 60 46, 76 44, 84 54
+         C 92 64, 88 78, 74 82
+         C 63 85, 54 80, 55 71
+         C 56 64, 63 63, 67 67"
+      stroke="currentColor"
+      strokeWidth="9"
+      strokeLinecap="round"
+      fill="none"
+    />
+    <path
+      d="M30 9 C 36 4, 46 4, 51 10 C 54 14, 53 19, 48 21 L34 22 C 29 20, 27 13, 30 9 Z"
+      fill="currentColor"
+    />
+    <circle cx="34" cy="13" r="2.4" fill="white" opacity="0.85" />
+    <path d="M27 11 L18 8 M27 11 L20 15" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+  </svg>
+);
+const WaterIcon = ({ className }) => (
+  <svg viewBox="0 0 100 100" className={className} fill="none">
+    <path
+      d="M50 8 C 50 8, 20 48, 20 66 C 20 84, 34 94, 50 94 C 66 94, 80 84, 80 66 C 80 48, 50 8, 50 8 Z"
+      stroke="currentColor" strokeWidth="8" strokeLinejoin="round"
+    />
+    <path d="M34 68 C 34 78, 42 82, 49 80" stroke="currentColor" strokeWidth="5.5" strokeLinecap="round" />
+  </svg>
+);
+const GunIcon = ({ className }) => (
+  <svg viewBox="0 0 100 100" className={className} fill="none">
+    <path
+      d="M10 46
+         L10 40 L14 40 L14 36 L70 36
+         L70 30 L88 30 L88 42 L82 42 L82 48 L70 48
+         L70 44 L46 44 L46 52 L40 52 L40 58
+         L34 58 L34 66 C 34 70, 31 72, 27 72
+         L23 72 C 20 72, 18 70, 18 67
+         L18 52 L14 52 L14 46 Z"
+      fill="currentColor"
+    />
+    <path d="M42 52 L42 58 L38 58 L38 53 Z" fill="currentColor" opacity="0.9" />
+    <rect x="83" y="31" width="5" height="10" fill="white" opacity="0.25" />
+  </svg>
+);
+const ResetIcon = ({ className }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+    <path d="M3 3v5h5" />
+  </svg>
+);
+
+const CHOICES = [
+  { id: "snake", label: "Snake", Icon: SnakeIcon, color: "#2ECC71", glow: "rgba(46,204,113,0.55)" },
+  { id: "water", label: "Water", Icon: WaterIcon, color: "#29B6F6", glow: "rgba(41,182,246,0.55)" },
+  { id: "gun", label: "Gun", Icon: GunIcon, color: "#FF6B6B", glow: "rgba(255,107,107,0.55)" },
+];
+
+const BEATS = { snake: "water", water: "gun", gun: "snake" };
+const VERB = { snake: "drank", water: "rusted", gun: "zapped" };
+
+function decide(user, computer) {
+  if (user === computer) return "tie";
+  return BEATS[user] === computer ? "user" : "computer";
+}
+
+const CONFETTI_COLORS = ["#FFD93D", "#FF6B6B", "#2ECC71", "#29B6F6", "#B388FF", "#FF8FD8"];
+
+function Confetti({ burstKey }) {
+  const [pieces, setPieces] = useState([]);
+  useEffect(() => {
+    if (!burstKey) return;
+    const next = Array.from({ length: 26 }, (_, i) => ({
+      id: `${burstKey}-${i}`,
+      left: Math.random() * 100,
+      delay: Math.random() * 0.15,
+      duration: 0.9 + Math.random() * 0.6,
+      color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+      rotate: Math.random() * 360,
+      size: 6 + Math.random() * 6,
+    }));
+    setPieces(next);
+    const t = setTimeout(() => setPieces([]), 1600);
+    return () => clearTimeout(t);
+  }, [burstKey]);
+
+  if (pieces.length === 0) return null;
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      {pieces.map((p) => (
+        <span
+          key={p.id}
+          style={{
+            position: "absolute",
+            left: `${p.left}%`,
+            top: "-10px",
+            width: p.size,
+            height: p.size * 1.6,
+            background: p.color,
+            borderRadius: 2,
+            transform: `rotate(${p.rotate}deg)`,
+            animation: `confettiFall ${p.duration}s ease-in ${p.delay}s forwards`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function SnakeWaterGunColorful() {
+  const [userChoice, setUserChoice] = useState(null);
+  const [computerChoice, setComputerChoice] = useState(null);
+  const [result, setResult] = useState(null);
+  const [phase, setPhase] = useState("idle");
+  const [scores, setScores] = useState({ user: 0, computer: 0, tie: 0 });
+  const [rounds, setRounds] = useState(0);
+  const [flavor, setFlavor] = useState("");
+  const [burstKey, setBurstKey] = useState(0);
+
+  const handlePick = (choiceId) => {
+    if (phase === "shaking") return;
+    setUserChoice(choiceId);
+    setComputerChoice(null);
+    setResult(null);
+    setPhase("shaking");
+
+    let ticks = 0;
+    const shuffle = setInterval(() => {
+      setComputerChoice(CHOICES[Math.floor(Math.random() * 3)].id);
+      ticks += 1;
+      if (ticks > 6) {
+        clearInterval(shuffle);
+        const finalComputer = CHOICES[Math.floor(Math.random() * 3)].id;
+        setComputerChoice(finalComputer);
+        const outcome = decide(choiceId, finalComputer);
+        setResult(outcome);
+        setRounds((r) => r + 1);
+        setScores((s) => ({
+          user: s.user + (outcome === "user" ? 1 : 0),
+          computer: s.computer + (outcome === "computer" ? 1 : 0),
+          tie: s.tie + (outcome === "tie" ? 1 : 0),
+        }));
+
+        if (outcome === "tie") {
+          setFlavor("Same pick — nobody blinks.");
+        } else {
+          const winner = outcome === "user" ? choiceId : finalComputer;
+          const loser = outcome === "user" ? finalComputer : choiceId;
+          const winnerLabel = CHOICES.find((c) => c.id === winner).label;
+          const loserLabel = CHOICES.find((c) => c.id === loser).label;
+          setFlavor(`${winnerLabel} ${VERB[winner]} ${loserLabel}!`);
+        }
+        if (outcome === "user") setBurstKey((k) => k + 1);
+        setPhase("revealed");
+      }
+    }, 90);
+  };
+
+  const resetMatch = () => {
+    setUserChoice(null);
+    setComputerChoice(null);
+    setResult(null);
+    setPhase("idle");
+    setScores({ user: 0, computer: 0, tie: 0 });
+    setRounds(0);
+    setFlavor("");
+  };
+
+  const resultStyle = {
+    user: { text: "YOU WIN! \u{1F389}", color: "#FFD93D" },
+    computer: { text: "COMPUTER WINS", color: "#FF6B6B" },
+    tie: { text: "IT'S A TIE", color: "#B388FF" },
+  };
+
+  return (
+    <div
+      className="w-full min-h-screen flex items-center justify-center p-6 relative overflow-hidden"
+      style={{
+        background: "linear-gradient(135deg, #12B3A8 0%, #0C7B93 50%, #073B4C 100%)",
+        fontFamily: "'Nunito', sans-serif",
+      }}
+    >
+      <div className="blob absolute -top-16 -left-16 w-64 h-64 rounded-full opacity-30" style={{ background: "#FF6B6B", filter: "blur(10px)" }} />
+      <div className="blob absolute top-1/3 -right-20 w-72 h-72 rounded-full opacity-25" style={{ background: "#FF8FD8", filter: "blur(10px)", animationDelay: "1.5s" }} />
+      <div className="blob absolute -bottom-20 left-1/4 w-72 h-72 rounded-full opacity-25" style={{ background: "#FFD93D", filter: "blur(10px)", animationDelay: "3s" }} />
+
+      <div className="w-full max-w-2xl relative z-10">
+        <div className="text-center mb-6">
+          <h1
+            className="display-font text-5xl sm:text-6xl font-bold"
+            style={{ color: "#FFFFFF", textShadow: "0 4px 0 rgba(0,0,0,0.15)" }}
+          >
+            Snake <span style={{ color: "#2ECC71" }}>Water</span> <span style={{ color: "#FF6B6B" }}>Gun</span>
+          </h1>
+          <p className="text-sm mt-2 font-semibold" style={{ color: "#D6F5F0" }}>
+            🐍 Snake drinks Water &nbsp; 💧 Water rusts Gun &nbsp; 🔫 Gun kills Snake
+          </p>
+        </div>
+
+        <div
+          className="flex justify-between items-center rounded-3xl px-6 py-4 mb-6"
+          style={{ background: "rgba(255,255,255,0.12)", backdropFilter: "blur(6px)" }}
+        >
+          <Score label="YOU" value={scores.user} color="#FFD93D" />
+          <div className="text-center">
+            <div className="display-font text-2xl text-white">VS</div>
+            <div className="text-[10px] uppercase tracking-widest font-bold" style={{ color: "#BEEFEA" }}>
+              Round {rounds}
+            </div>
+          </div>
+          <Score label="COMPUTER" value={scores.computer} color="#FF6B6B" align="right" />
+        </div>
+
+        <div
+          className="relative rounded-3xl px-6 py-8 mb-6 overflow-hidden"
+          style={{ background: "#FFF3E0" }}
+        >
+          <Confetti burstKey={burstKey} />
+          <div className="flex items-center justify-around">
+            <ArenaSlot label="You" choiceId={userChoice} shaking={false} />
+            <div className="display-font text-3xl" style={{ color: "#C9AE86" }}>×</div>
+            <ArenaSlot label="Computer" choiceId={computerChoice} shaking={phase === "shaking"} />
+          </div>
+
+          {phase === "revealed" && result && (
+            <div className="mt-6 text-center pop-in">
+              <div className="display-font text-3xl sm:text-4xl" style={{ color: resultStyle[result].color }}>
+                {resultStyle[result].text}
+              </div>
+              <p className="text-sm mt-1 font-semibold" style={{ color: "#8A6A4A" }}>{flavor}</p>
+            </div>
+          )}
+
+          {phase === "idle" && (
+            <p className="text-center text-sm mt-6 font-semibold" style={{ color: "#B08F63" }}>
+              Pick a move below to start the round!
+            </p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          {CHOICES.map((c) => {
+            const isSelected = userChoice === c.id && phase !== "idle";
+            return (
+              <button
+                key={c.id}
+                onClick={() => handlePick(c.id)}
+                disabled={phase === "shaking"}
+                className="choice-btn rounded-3xl py-6 flex flex-col items-center gap-2 disabled:cursor-not-allowed disabled:opacity-70"
+                style={{
+                  background: c.color,
+                  boxShadow: isSelected ? `0 0 0 4px #FFFFFF, 0 8px 20px ${c.glow}` : `0 6px 16px ${c.glow}`,
+                }}
+              >
+                <c.Icon className="w-12 h-12 text-white" />
+                <span className="display-font text-xl text-white">{c.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex justify-center mt-6">
+          <button
+            onClick={resetMatch}
+            className="flex items-center gap-2 text-sm px-5 py-2 rounded-full font-bold"
+            style={{ background: "rgba(255,255,255,0.15)", color: "#FFFFFF" }}
+          >
+            <ResetIcon className="w-4 h-4" />
+            Reset match
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Score({ label, value, color, align = "left" }) {
+  return (
+    <div style={{ textAlign: align === "right" ? "right" : "left" }}>
+      <div className="text-[10px] uppercase tracking-widest font-bold" style={{ color: "#BEEFEA" }}>
+        {label}
+      </div>
+      <div className="display-font text-4xl" style={{ color }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function ArenaSlot({ label, choiceId, shaking }) {
+  const choice = CHOICES.find((c) => c.id === choiceId);
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div
+        className="w-24 h-24 rounded-full flex items-center justify-center"
+        style={{
+          background: choice ? choice.color : "#F5E6CC",
+          boxShadow: choice ? `0 6px 18px ${choice.glow}` : "none",
+        }}
+      >
+        {choice ? (
+          <choice.Icon className={`w-14 h-14 text-white ${shaking ? "shaking" : "pop-in"}`} />
+        ) : (
+          <span className="display-font text-3xl" style={{ color: "#C9AE86" }}>?</span>
+        )}
+      </div>
+      <span className="text-xs uppercase tracking-widest font-bold" style={{ color: "#0C7B93" }}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<SnakeWaterGunColorful />);
+</script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap');
+  .display-font { font-family: 'Fredoka', sans-serif; }
+  @keyframes confettiFall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(420px) rotate(360deg); opacity: 0; }
+  }
+  @keyframes blobFloat {
+    0%, 100% { transform: translate(0,0) scale(1); }
+    50% { transform: translate(12px,-16px) scale(1.05); }
+  }
+  .blob { animation: blobFloat 7s ease-in-out infinite; }
+  @keyframes shakeIcon {
+    0%, 100% { transform: translateX(0) rotate(0deg) scale(1); }
+    25% { transform: translateX(-4px) rotate(-6deg) scale(1.05); }
+    75% { transform: translateX(4px) rotate(6deg) scale(1.05); }
+  }
+  .shaking { animation: shakeIcon 160ms ease-in-out infinite; }
+  @keyframes popIn {
+    0% { transform: scale(0.5) rotate(-8deg); opacity: 0; }
+    60% { transform: scale(1.12) rotate(3deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  .pop-in { animation: popIn 380ms cubic-bezier(0.34,1.56,0.64,1); }
+  .choice-btn { transition: transform 160ms ease, box-shadow 160ms ease; }
+  .choice-btn:hover { transform: translateY(-6px) scale(1.04); }
+  .choice-btn:active { transform: translateY(-2px) scale(0.97); }
+</style>
+</body>
+</html>

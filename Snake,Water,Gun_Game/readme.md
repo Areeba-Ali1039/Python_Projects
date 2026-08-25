@@ -185,6 +185,7 @@ Idle → Player picks a move
 ## 👤 Author
 
 **Areeba Ali**
+
 Built as a progression from a Python console script into a fully interactive web game.
 
 ---
